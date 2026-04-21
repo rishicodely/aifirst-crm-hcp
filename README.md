@@ -2,8 +2,6 @@
 
 An AI-driven CRM module for pharmaceutical field sales reps to log interactions with Healthcare Professionals (HCPs) via natural conversation instead of manual form-filling. The entire form on the left is populated and edited by an LLM agent on the right — users never type into the form directly.
 
-Built as Round 1 Task 1 of the Masarrati IT Studio assignment.
-
 ---
 
 ## Demo Flow
