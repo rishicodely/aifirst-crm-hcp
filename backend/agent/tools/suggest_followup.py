@@ -1,13 +1,21 @@
+from agent.llm import llm
 from langchain.tools import tool
 
 @tool
-def suggest_followup(topics: list, sentiment: str):
+def suggest_followup(text: str):
     """
-    Suggest next action based on interaction.
+    Suggest next action using LLM.
     """
-    if sentiment == "positive":
-        return {"follow_up": "Share detailed product information"}
-    elif sentiment == "neutral":
-        return {"follow_up": "Schedule follow-up meeting"}
-    else:
-        return {"follow_up": "Address concerns with more data"}
+    prompt = f"""
+Given this interaction:
+{text}
+
+Suggest a next best action for a pharma sales rep.
+Return short actionable advice.
+"""
+
+    response = llm.invoke(prompt)
+
+    return {
+        "follow_up": response.content
+    }

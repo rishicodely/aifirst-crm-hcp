@@ -7,28 +7,31 @@ function App() {
       style={{
         display: "flex",
         height: "100vh",
-        backgroundColor: "#0f172a",
-        color: "white",
+        backgroundColor: "#ffffff",
+        color: "#111827",
         fontFamily: "Inter, sans-serif",
       }}
     >
+      {/* LEFT PANEL */}
       <div
         style={{
           flex: 1,
-          padding: "32px",
-          borderRight: "1px solid #1e293b",
+          padding: "40px",
+          borderRight: "1px solid #e5e7eb",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
+          justifyContent: "flex-start",
+          paddingTop: "40px",
         }}
       >
         <InteractionForm />
       </div>
 
+      {/* RIGHT PANEL */}
       <div
         style={{
           flex: 1,
-          padding: "32px",
+          padding: "40px",
           display: "flex",
           flexDirection: "column",
         }}

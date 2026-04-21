@@ -17,13 +17,27 @@ function ChatPanel() {
     dispatch(addMessage({ role: "user", text: userInput }));
     setInput("");
 
-    let updates = {};
     try {
       const res = await axios.post("http://127.0.0.1:8000/chat", {
         message: userInput,
         form_state: formState,
       });
-      updates = res.data.formUpdates || {};
+
+      const updates = res.data.formUpdates || {};
+      const assistantMessage = res.data.assistantMessage || "Done.";
+      const toolsUsed = res.data.toolsUsed || [];
+
+      if (Object.keys(updates).length) {
+        dispatch(updateFields(updates));
+      }
+
+      dispatch(
+        addMessage({
+          role: "assistant",
+          text: assistantMessage,
+          tool: toolsUsed.join(", "),
+        }),
+      );
     } catch (err) {
       dispatch(
         addMessage({
@@ -31,36 +45,7 @@ function ChatPanel() {
           text: `Error: ${err.message}`,
         }),
       );
-      return;
     }
-
-    const cleanUpdates = Object.fromEntries(
-      Object.entries(updates).filter(([, v]) => v !== null && v !== undefined),
-    );
-
-    if (Object.keys(cleanUpdates).length) {
-      dispatch(updateFields(cleanUpdates));
-    }
-
-    let message = "";
-
-    if (cleanUpdates.hcp_name) message += `HCP set to ${cleanUpdates.hcp_name}. `;
-    if (cleanUpdates.interaction_type) message += `Interaction type set. `;
-    if (cleanUpdates.date) message += `Date updated. `;
-    if (cleanUpdates.time) message += `Time updated. `;
-    if (cleanUpdates.sentiment) message += `Sentiment → ${cleanUpdates.sentiment}. `;
-    if (cleanUpdates.topics?.length) message += `Topics added. `;
-    if (cleanUpdates.materials_shared?.length) message += `Materials recorded. `;
-    if (cleanUpdates.attendees?.length) message += `Attendees recorded. `;
-
-    if (!message) message = "Updated successfully.";
-
-    dispatch(
-      addMessage({
-        role: "assistant",
-        text: message,
-      }),
-    );
   };
 
   const handleKeyDown = (e) => {
@@ -72,33 +57,75 @@ function ChatPanel() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <h2 style={{ marginBottom: "10px" }}>Chat</h2>
+      {/* Header */}
+      <h2 style={{ marginBottom: "10px", fontWeight: "600" }}>
+        Chat Assistant
+      </h2>
 
-      {/* Messages */}
+      {/* Messages Box */}
       <div
         style={{
           flex: 1,
           overflowY: "auto",
-          paddingBottom: "10px",
+          padding: "12px",
+          border: "1px solid #e5e7eb",
+          borderRadius: "8px",
+          background: "#fafafa",
+          marginBottom: "12px",
         }}
       >
+        {messages.length === 0 && (
+          <div style={{ color: "#6b7280", fontSize: "14px" }}>
+            Start typing to log or edit an interaction...
+          </div>
+        )}
+
         {messages.map((msg, i) => (
           <div
             key={i}
             style={{
-              background: msg.role === "user" ? "#2563eb" : "#1e293b",
-              padding: "8px",
-              margin: "6px 0",
-              borderRadius: "8px",
+              display: "flex",
+              justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+              marginBottom: "8px",
             }}
           >
-            <b>{msg.role}:</b> {msg.text}
+            <div
+              style={{
+                maxWidth: "70%",
+                background: msg.role === "user" ? "#2563eb" : "#ffffff",
+                color: msg.role === "user" ? "white" : "#111827",
+                padding: "10px",
+                borderRadius: "10px",
+                border: msg.role === "assistant" ? "1px solid #e5e7eb" : "none",
+              }}
+            >
+              <div>{msg.text}</div>
+
+              {msg.tool && (
+                <div
+                  style={{
+                    fontSize: "11px",
+                    marginTop: "4px",
+                    color: "#6b7280",
+                  }}
+                >
+                  [{msg.tool}]
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
 
       {/* Input */}
-      <div style={{ display: "flex", gap: "8px" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "8px",
+          borderTop: "1px solid #e5e7eb",
+          paddingTop: "10px",
+        }}
+      >
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -107,16 +134,16 @@ function ChatPanel() {
           style={{
             flex: 1,
             padding: "10px",
-            background: "#1e293b",
-            border: "none",
-            color: "white",
+            border: "1px solid #e5e7eb",
             borderRadius: "6px",
+            outline: "none",
           }}
         />
+
         <button
           onClick={sendMessage}
           style={{
-            padding: "10px",
+            padding: "10px 16px",
             background: "#2563eb",
             border: "none",
             color: "white",

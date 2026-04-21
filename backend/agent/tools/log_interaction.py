@@ -5,26 +5,20 @@ from agent.llm import llm
 from datetime import datetime
 from langchain.tools import tool
 
-@tool
-def log_interaction(text: str) -> dict:
-    """
-    Extract structured interaction data from a natural language description.
-    """
-    return log_interaction_tool(text)
 
 class InteractionData(BaseModel):
-    hcp_name: Optional[str]
-    interaction_type: Optional[str]
-    date: Optional[str]
-    time: Optional[str]
-    topics: Optional[List[str]]
-    materials_shared: Optional[List[str]]
-    sentiment: Optional[str]
-    attendees: Optional[List[str]]
+    hcp_name: Optional[str] = None
+    interaction_type: Optional[str] = None
+    date: Optional[str] = None
+    time: Optional[str] = None
+    topics: Optional[List[str]] = None
+    materials_shared: Optional[List[str]] = None
+    sentiment: Optional[str] = None
+    attendees: Optional[List[str]] = None
+
 
 prompt = ChatPromptTemplate.from_messages([
-    ("system", """
-You are a pharma CRM assistant.
+    ("system", """You are a pharma CRM assistant.
 
 Extract structured interaction details from user input.
 
@@ -52,12 +46,11 @@ CRITICAL:
 
 structured_llm = llm.with_structured_output(InteractionData)
 
+
 def clean_output(data: dict):
     if data.get("attendees"):
-
         if data["attendees"] == ["I"]:
             data["attendees"] = None
-
         elif data["hcp_name"] and data["attendees"] == [data["hcp_name"]]:
             data["attendees"] = None
 
@@ -66,12 +59,19 @@ def clean_output(data: dict):
 
     return {k: v for k, v in data.items() if v is not None}
 
+
 def log_interaction_tool(text: str):
     current_date = datetime.now().strftime("%Y-%m-%d")
-
     chain = prompt | structured_llm
     result = chain.invoke({
         "text": f"Today's date is {current_date}. \n\n{text}"
     })
-
     return clean_output(result.model_dump())
+
+
+@tool
+def log_interaction(text: str) -> dict:
+    """
+    Extract structured interaction data from a natural language description.
+    """
+    return log_interaction_tool(text)

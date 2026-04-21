@@ -1,15 +1,25 @@
 from langchain.tools import tool
+from db.session import SessionLocal
+from db.models import HCP
+
 
 @tool
 def fetch_hcp_info(name: str):
     """
-    Fetch HCP details by name.
+    Fetch HCP details from database by name (fuzzy match).
     """
-    db = {
-        "Dr Sarah Smith": {
-            "specialty": "Cardiologist",
-            "last_interaction": "2026-04-10"
-        }
-    }
+    db = SessionLocal()
+    try:
+        hcp = db.query(HCP).filter(HCP.name.ilike(f"%{name}%")).first()
 
-    return db.get(name, {})
+        if not hcp:
+            return {"hcp_lookup_status": f"No HCP found matching '{name}'"}
+
+        return {
+            "hcp_name": hcp.name,
+            "specialty": hcp.specialty,
+            "last_interaction": hcp.last_interaction,
+            "hcp_lookup_status": f"Found {hcp.name} ({hcp.specialty})",
+        }
+    finally:
+        db.close()
