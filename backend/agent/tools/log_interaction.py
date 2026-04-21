@@ -64,7 +64,7 @@ def clean_output(data: dict):
     if data.get("topics"):
         data["topics"] = [t.replace("discussed ", "").strip() for t in data["topics"]]
 
-    return data
+    return {k: v for k, v in data.items() if v is not None}
 
 def log_interaction_tool(text: str):
     current_date = datetime.now().strftime("%Y-%m-%d")
@@ -74,4 +74,4 @@ def log_interaction_tool(text: str):
         "text": f"Today's date is {current_date}. \n\n{text}"
     })
 
-    return clean_output(result.dict())
+    return clean_output(result.model_dump())

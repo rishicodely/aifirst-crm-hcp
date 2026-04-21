@@ -49,4 +49,4 @@ def edit_interaction(text: str, current_form: dict) -> dict:
         "form": current_form
     })
 
-    return {k: v for k, v in result.dict().items() if v is not None}
+    return {k: v for k, v in result.model_dump().items() if v is not None}

@@ -4,9 +4,18 @@ from agent.state import AgentState
 from agent.llm import llm
 from agent.tools.log_interaction import log_interaction
 from agent.tools.edit_interaction import edit_interaction
+from agent.tools.fetch_hcp_info import fetch_hcp_info
+from agent.tools.suggest_followup import suggest_followup
+from agent.tools.schedule_reminder import schedule_reminder
 from langchain_core.messages import SystemMessage
 
-tools = [log_interaction, edit_interaction]
+tools = [
+    log_interaction,
+    edit_interaction,
+    fetch_hcp_info,
+    suggest_followup,
+    schedule_reminder
+]
 
 llm_with_tools = llm.bind_tools(tools)
 
@@ -16,17 +25,28 @@ def agent_node(state: AgentState):
     system = SystemMessage(content="""
 You are a CRM assistant.
 
-Decide which tool to use:
+Decide intelligently which tool to use:
 
-- If user describes a new interaction → call log_interaction
-- If user corrects or edits → call edit_interaction
+- New interaction → log_interaction
+- Edit request → edit_interaction
+- Doctor info → fetch_hcp_info
+- Next steps → suggest_followup
+- Scheduling → schedule_reminder
 
-If no tool is needed, respond normally.
-
-Be accurate. Do not hallucinate.
+IMPORTANT:
+- Only call a tool if clearly needed
+- Otherwise respond normally
+- When calling tools, follow correct JSON format
 """)
 
     response = llm_with_tools.invoke([system] + messages)
+
+    if not getattr(response, "tool_calls", None):
+        print(" No tool call → forcing log_interaction fallback")
+        response.tool_calls = [{
+            "name": "log_interaction",
+            "args": {"text": messages[-1].content}
+        }]
 
     return {
         "messages": messages + [response]
@@ -36,20 +56,44 @@ def tool_node(state: AgentState):
     last_message = state["messages"][-1]
     updates = {}
 
-    for call in last_message.tool_calls:
-        if call["name"] == "log_interaction":
-            result = log_interaction.invoke(call["args"]["text"])
-        elif call["name"] == "edit_interaction":
+    tool_calls = getattr(last_message, "tool_calls", []) or []
+
+    if not tool_calls:
+        print("No tool calls received")
+        return {"form_updates": {}}
+
+    for call in tool_calls:
+        name = call.get("name", "").strip()
+        args = call.get("args", {}) or {}
+
+        print(f"🔧 TOOL: {name}")
+        print(f"ARGS: {args}")
+
+        if name == "log_interaction":
+            result = log_interaction.invoke(args)
+
+        elif name == "edit_interaction":
             result = edit_interaction.invoke({
-                "text": call["args"]["text"],
-                "current_form": state["form_state"]
+                **args,
+                "current_form": state["form_state"],
             })
+
+        elif name == "fetch_hcp_info":
+            result = fetch_hcp_info.invoke(args)
+
+        elif name == "suggest_followup":
+            result = suggest_followup.invoke(args)
+
+        elif name == "schedule_reminder":
+            result = schedule_reminder.invoke(args)
+
         else:
             result = {}
-        updates.update(result)
+
+        if isinstance(result, dict):
+            updates.update(result)
 
     return {"form_updates": updates}
-
 
 def should_continue(state: AgentState):
     last_message = state["messages"][-1]
